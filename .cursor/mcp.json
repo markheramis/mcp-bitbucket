@@ -1,0 +1,15 @@
+{
+    "mcpServers": {
+        "bitbucketMcp": {
+            "command": "node",
+            "args": [
+                "/path/of/wrapper.js"
+            ],
+            "env": {
+                "BITBUCKET_URL": "https://api.bitbucket.org/2.0",
+                "BITBUCKET_USERNAME": "<your_username>",
+                "BITBUCKET_PASSWORD": "<your_password>"
+            }
+        }
+    }
+}
