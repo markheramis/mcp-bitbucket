@@ -4,18 +4,20 @@ An MCP (Model Context Protocol) server for managing Bitbucket Server/Cloud pull 
 
 ## Table of Contents
 
-- [Features](#features)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-  - [With Cline](#with-cline)
-  - [With Cursor](#with-cursor)
-  - [With Claude Desktop](#with-claude-desktop)
-  - [Starting the server](#starting-the-server)
-  - [Using the MCP Inspector](#using-the-mcp-inspector)
-- [Available Tools](#available-tools)
-- [Development](#development)
-- [License](#license)
+- [Bitbucket MCP Server](#bitbucket-mcp-server)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+  - [Usage](#usage)
+    - [With Cline](#with-cline)
+    - [With Cursor](#with-cursor)
+    - [With Claude Desktop](#with-claude-desktop)
+    - [Starting the server](#starting-the-server)
+    - [Using the MCP Inspector](#using-the-mcp-inspector)
+  - [Available Tools](#available-tools)
+  - [Development](#development)
+  - [License](#license)
 
 ## Features
 
@@ -44,8 +46,6 @@ npm run build
 ```
 
 ## Configuration
-
-Environment variable names align with [atlassian-mcp](https://github.com/kompallik/ATLASSIAN-MCP) for consistency across Atlassian MCP servers.
 
 Create a `.env` file in the root directory (or set env in your MCP client):
 
