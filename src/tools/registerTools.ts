@@ -27,6 +27,13 @@ import { registerMergePullRequestTool } from "./pullRequest/mergePullRequest.js"
 import { registerDeclinePullRequestTool } from "./pullRequest/declinePullRequest.js";
 import { registerGetReviewsTool } from "./pullRequest/getReviews.js";
 import { registerGetDiffTool } from "./pullRequest/getDiff.js";
+import { registerApprovePullRequestTool } from "./pullRequest/approvePullRequest.js";
+import { registerUnapprovePullRequestTool } from "./pullRequest/unapprovePullRequest.js";
+import { registerRequestChangesPullRequestTool } from "./pullRequest/requestChangesPullRequest.js";
+import { registerUnrequestChangesPullRequestTool } from "./pullRequest/unrequestChangesPullRequest.js";
+import { registerGetPullRequestActivityTool } from "./pullRequest/getPullRequestActivity.js";
+import { registerListPullRequestCommitsTool } from "./pullRequest/listPullRequestCommits.js";
+import { registerListPullRequestTasksTool } from "./pullRequest/listPullRequestTasks.js";
 import { registerAddCommentTool } from "./comments/addComment.js";
 import { registerListCommentsTool } from "./comments/listComments.js";
 import { registerGetCommentTool } from "./comments/getComment.js";
@@ -65,6 +72,13 @@ export function registerAllTools(server: McpServer): void {
   registerGetPullRequestTool(server);
   registerMergePullRequestTool(server);
   registerDeclinePullRequestTool(server);
+  registerApprovePullRequestTool(server);
+  registerUnapprovePullRequestTool(server);
+  registerRequestChangesPullRequestTool(server);
+  registerUnrequestChangesPullRequestTool(server);
+  registerGetPullRequestActivityTool(server);
+  registerListPullRequestCommitsTool(server);
+  registerListPullRequestTasksTool(server);
   registerAddCommentTool(server);
   registerListCommentsTool(server);
   registerGetCommentTool(server);

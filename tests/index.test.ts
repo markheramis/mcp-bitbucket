@@ -1,13 +1,9 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
-import { env, execPath } from "process";
-// Load .env.testing file explicitly
+import { execPath } from "process";
+
 require('dotenv').config({ path: '.env.testing' });
 
-// Type definitions for MCP responses
 type McpResponse = {
   content: Array<{
     type: string;
@@ -16,55 +12,33 @@ type McpResponse = {
   isError?: boolean;
 };
 
-
-// Helper function to create a temporary directory
-function createTempDir(): string {
-  const tempDir = path.join(os.tmpdir(), `mcp-bitbucket-test-${Date.now()}`);
-  fs.mkdirSync(tempDir, { recursive: true });
-  return tempDir;
-}
-
-// Helper function to clean up temporary directory
-function cleanupTempDir(dir: string): void {
-  if (fs.existsSync(dir)) {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
-}
-
-// Helper function to wait for a file to exist
-function waitForFile(filePath: string, timeout = 5000): Promise<boolean> {
-  return new Promise((resolve) => {
-    const startTime = Date.now();
-    const checkFile = () => {
-      if (fs.existsSync(filePath)) {
-        resolve(true);
-      } else if (Date.now() - startTime > timeout) {
-        resolve(false);
-      } else {
-        setTimeout(checkFile, 100);
-      }
-    };
-    checkFile();
-  });
+/**
+ * Parse the text payload returned by a tool call when it is valid JSON.
+ * @param result The MCP tool response to parse.
+ * @returns The parsed JSON payload.
+ */
+function parseJsonContent(result: McpResponse): unknown {
+  return JSON.parse(result.content[0]?.text ?? 'null');
 }
 
 describe('MCP Bitbucket Server Tests', () => {
   let client: Client;
 
-  // Test data - for Bitbucket Cloud
-  const TEST_WORKSPACE = 'your_workspace';
-  const TEST_PROJECT = 'TEST';
-  const TEST_REPO = 'test-repo';
-  const TEST_PR_ID = 123;
+  const livePullRequestEnv = {
+    workspace: process.env.TEST_BITBUCKET_WORKSPACE,
+    repository: process.env.TEST_BITBUCKET_REPO_SLUG,
+    prId: process.env.TEST_BITBUCKET_PULL_REQUEST_ID
+  };
+  const hasLivePullRequestEnv = Boolean(
+    livePullRequestEnv.workspace &&
+      livePullRequestEnv.repository &&
+      livePullRequestEnv.prId
+  );
 
-  // Increase timeouts for potentially slow API calls
-  jest.setTimeout(60000); // 60 second timeout for the entire test suite
+  jest.setTimeout(60000);
 
   beforeAll(async () => {
-    
-
-    // Aligned with atlassian-mcp: BITBUCKET_BASE_URL, BITBUCKET_EMAIL, BITBUCKET_TOKEN; legacy vars still supported
-    const env: Record<string, string | undefined> = {
+    const rawTransportEnv: Record<string, string | undefined> = {
       BITBUCKET_BASE_URL: process.env.BITBUCKET_BASE_URL || process.env.BITBUCKET_URL,
       BITBUCKET_EMAIL: process.env.BITBUCKET_EMAIL,
       BITBUCKET_TOKEN: process.env.BITBUCKET_TOKEN,
@@ -72,47 +46,152 @@ describe('MCP Bitbucket Server Tests', () => {
       BITBUCKET_PASSWORD: process.env.BITBUCKET_PASSWORD,
       BITBUCKET_DEFAULT_PROJECT: process.env.BITBUCKET_DEFAULT_PROJECT
     };
-    // Remove undefined so we don't override with "undefined" string
-    Object.keys(env).forEach(k => { if (env[k] === undefined) delete env[k]; });
-    
-    // Create MCP client with transport that will start the server
+    const transportEnv = Object.fromEntries(
+      Object.entries(rawTransportEnv).filter((entry): entry is [string, string] => entry[1] !== undefined)
+    );
+
     const transport = new StdioClientTransport({
       command: execPath,
       args: ['--loader', 'ts-node/esm', '--experimental-specifier-resolution=node', 'src/index.ts'],
-      env
+      env: transportEnv
     });
+
     client = new Client({
       name: "bitbucket-test-client",
       version: "0.1.0"
     });
-    // Connect to MCP server with a longer timeout
-    try {
-      await client.connect(transport);
-    } catch (error) {
-      console.error("Failed to connect to MCP server:", error);
-      throw error;
-    }
-  }, 30000); // 30 second timeout for the beforeAll hook
+
+    await client.connect(transport);
+  }, 30000);
+
   afterAll(async () => {
-    // Cleanup
-    try {
-      await client.close();
-    //   console.log("Closed MCP client connection");
-    } catch (error) {
-      console.error("Error closing client:", error);
-    }
-  }, 30000); // 30 second timeout for afterAll
-  describe('CRUD Operations - Ordered Tests', () => {
-    // List workspaces test with better error handling
+    await client.close();
+  }, 30000);
+
+  describe('Tool registration', () => {
+    it('should advertise the expanded pull request workflow tools', async () => {
+      const result = await client.listTools();
+      const toolNames = result.tools.map((tool) => tool.name);
+
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_approve_pull_request',
+        'bitbucket_unapprove_pull_request',
+        'bitbucket_request_changes_pull_request',
+        'bitbucket_unrequest_changes_pull_request',
+        'bitbucket_get_pull_request_activity',
+        'bitbucket_list_pull_request_commits',
+        'bitbucket_list_pull_request_tasks',
+        'bitbucket_search_workspace_accounts',
+        'bitbuicket_search_workspace_accounts'
+      ]));
+    });
+  });
+
+  describe('Read-only workspace smoke test', () => {
     it('should list workspaces', async () => {
       const result = await client.callTool({
         name: 'bitbucket_list_workspaces',
         arguments: {}
       }) as McpResponse;
-    //   console.log("Workspace response:", result.content[0].text);
-      // We don't fail the test for auth errors, just verify we got any response
+
       expect(result.content).toBeDefined();
       expect(result.content.length).toBeGreaterThan(0);
-    }, 30000); // 30 second timeout for this test
+    }, 30000);
+  });
+
+  describe('Live pull request workflow', () => {
+    const maybeIt = hasLivePullRequestEnv ? it : it.skip;
+    const livePullRequestArgs = {
+      workspace: livePullRequestEnv.workspace as string,
+      repository: livePullRequestEnv.repository as string,
+      prId: Number(livePullRequestEnv.prId)
+    };
+
+    maybeIt('should approve and unapprove the fixture pull request', async () => {
+      const approveResult = await client.callTool({
+        name: 'bitbucket_approve_pull_request',
+        arguments: livePullRequestArgs
+      }) as McpResponse;
+      const approvedPayload = parseJsonContent(approveResult) as { approved?: boolean; state?: string | null };
+
+      expect(approveResult.isError).not.toBe(true);
+      expect(approvedPayload).toEqual(expect.objectContaining({
+        approved: true
+      }));
+
+      const unapproveResult = await client.callTool({
+        name: 'bitbucket_unapprove_pull_request',
+        arguments: livePullRequestArgs
+      }) as McpResponse;
+
+      expect(unapproveResult.isError).not.toBe(true);
+
+      const prResult = await client.callTool({
+        name: 'bitbucket_get_pull_request',
+        arguments: livePullRequestArgs
+      }) as McpResponse;
+      const prPayload = parseJsonContent(prResult) as { participants?: Array<{ approved?: boolean }> };
+      const approvingParticipant = prPayload.participants?.find((participant) => participant.approved);
+
+      expect(approvingParticipant).toBeUndefined();
+    }, 30000);
+
+    maybeIt('should request changes and then remove the change request', async () => {
+      const requestChangesResult = await client.callTool({
+        name: 'bitbucket_request_changes_pull_request',
+        arguments: livePullRequestArgs
+      }) as McpResponse;
+      const requestedPayload = parseJsonContent(requestChangesResult) as { state?: string | null };
+
+      expect(requestChangesResult.isError).not.toBe(true);
+      expect(requestedPayload.state).toBe('changes_requested');
+
+      const unrequestChangesResult = await client.callTool({
+        name: 'bitbucket_unrequest_changes_pull_request',
+        arguments: livePullRequestArgs
+      }) as McpResponse;
+
+      expect(unrequestChangesResult.isError).not.toBe(true);
+
+      const prResult = await client.callTool({
+        name: 'bitbucket_get_pull_request',
+        arguments: livePullRequestArgs
+      }) as McpResponse;
+      const prPayload = parseJsonContent(prResult) as { participants?: Array<{ state?: string | null }> };
+      const changesRequestedParticipant = prPayload.participants?.find(
+        (participant) => participant.state === 'changes_requested'
+      );
+
+      expect(changesRequestedParticipant).toBeUndefined();
+    }, 30000);
+
+    maybeIt('should fetch pull request activity, commits, and tasks', async () => {
+      const activityResult = await client.callTool({
+        name: 'bitbucket_get_pull_request_activity',
+        arguments: livePullRequestArgs
+      }) as McpResponse;
+      const activityPayload = parseJsonContent(activityResult) as { values?: unknown[] };
+
+      expect(activityResult.isError).not.toBe(true);
+      expect(Array.isArray(activityPayload.values)).toBe(true);
+
+      const commitsResult = await client.callTool({
+        name: 'bitbucket_list_pull_request_commits',
+        arguments: livePullRequestArgs
+      }) as McpResponse;
+      const commitsPayload = parseJsonContent(commitsResult) as { values?: unknown[] };
+
+      expect(commitsResult.isError).not.toBe(true);
+      expect(Array.isArray(commitsPayload.values)).toBe(true);
+
+      const tasksResult = await client.callTool({
+        name: 'bitbucket_list_pull_request_tasks',
+        arguments: livePullRequestArgs
+      }) as McpResponse;
+      const tasksPayload = parseJsonContent(tasksResult) as { values?: unknown[] };
+
+      expect(tasksResult.isError).not.toBe(true);
+      expect(Array.isArray(tasksPayload.values)).toBe(true);
+    }, 30000);
   });
 });
