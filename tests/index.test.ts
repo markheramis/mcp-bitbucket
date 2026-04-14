@@ -69,10 +69,11 @@ describe('MCP Bitbucket Server Tests', () => {
   }, 30000);
 
   describe('Tool registration', () => {
-    it('should advertise the expanded pull request workflow tools', async () => {
+    it('should advertise all registered tools', async () => {
       const result = await client.listTools();
       const toolNames = result.tools.map((tool) => tool.name);
 
+      // Pull request workflow tools
       expect(toolNames).toEqual(expect.arrayContaining([
         'bitbucket_approve_pull_request',
         'bitbucket_unapprove_pull_request',
@@ -83,6 +84,117 @@ describe('MCP Bitbucket Server Tests', () => {
         'bitbucket_list_pull_request_tasks',
         'bitbucket_search_workspace_accounts',
         'bitbuicket_search_workspace_accounts'
+      ]));
+
+      // Branch restriction tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_branch_restrictions',
+        'bitbucket_create_branch_restriction',
+        'bitbucket_get_branch_restriction',
+        'bitbucket_update_branch_restriction',
+        'bitbucket_delete_branch_restriction'
+      ]));
+
+      // Branching model tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_get_branching_model',
+        'bitbucket_update_branching_model'
+      ]));
+
+      // Commit status tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_commit_statuses',
+        'bitbucket_create_commit_status',
+        'bitbucket_update_commit_status'
+      ]));
+
+      // Pipeline tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_pipelines',
+        'bitbucket_get_pipeline',
+        'bitbucket_trigger_pipeline',
+        'bitbucket_stop_pipeline'
+      ]));
+
+      // Deployment tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_deployments',
+        'bitbucket_get_deployment'
+      ]));
+
+      // Issue tracker tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_issues',
+        'bitbucket_create_issue',
+        'bitbucket_get_issue',
+        'bitbucket_update_issue',
+        'bitbucket_delete_issue',
+        'bitbucket_list_issue_comments',
+        'bitbucket_create_issue_comment'
+      ]));
+
+      // Snippet tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_snippets',
+        'bitbucket_create_snippet',
+        'bitbucket_get_snippet',
+        'bitbucket_update_snippet',
+        'bitbucket_delete_snippet'
+      ]));
+
+      // Webhook tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_webhooks',
+        'bitbucket_create_webhook',
+        'bitbucket_get_webhook',
+        'bitbucket_update_webhook',
+        'bitbucket_delete_webhook'
+      ]));
+
+      // Download tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_downloads',
+        'bitbucket_get_download',
+        'bitbucket_delete_download'
+      ]));
+
+      // Tag tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_tags',
+        'bitbucket_create_tag',
+        'bitbucket_get_tag',
+        'bitbucket_delete_tag'
+      ]));
+
+      // Report tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_reports',
+        'bitbucket_create_or_update_report',
+        'bitbucket_get_report',
+        'bitbucket_delete_report'
+      ]));
+
+      // Permission tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_user_permissions',
+        'bitbucket_list_group_permissions',
+        'bitbucket_update_user_permission',
+        'bitbucket_update_group_permission',
+        'bitbucket_delete_user_permission',
+        'bitbucket_delete_group_permission'
+      ]));
+
+      // Source / browse tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_get_source',
+        'bitbucket_browse_repository'
+      ]));
+
+      // SSH key tools
+      expect(toolNames).toEqual(expect.arrayContaining([
+        'bitbucket_list_ssh_keys',
+        'bitbucket_add_ssh_key',
+        'bitbucket_delete_ssh_key'
       ]));
     });
   });
